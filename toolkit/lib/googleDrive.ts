@@ -58,7 +58,11 @@ class GoogleDriveService {
       const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
       const sharedDriveId = process.env.GOOGLE_SHARED_DRIVE_ID;
       
-      const fileMetadata: any = {
+      const fileMetadata: {
+        name: string;
+        driveId?: string;
+        parents?: string[];
+      } = {
         name: fileName,
       };
 
@@ -75,7 +79,12 @@ class GoogleDriveService {
         body: fs.createReadStream(filePath),
       };
 
-      const createParams: any = {
+      const createParams: {
+        requestBody: typeof fileMetadata;
+        media: typeof media;
+        fields: string;
+        supportsAllDrives?: boolean;
+      } = {
         requestBody: fileMetadata,
         media: media,
         fields: 'id',
@@ -92,7 +101,14 @@ class GoogleDriveService {
 
       // Make the file publicly accessible
       if (fileId) {
-        const permissionParams: any = {
+        const permissionParams: {
+          fileId: string;
+          requestBody: {
+            role: string;
+            type: string;
+          };
+          supportsAllDrives?: boolean;
+        } = {
           fileId: fileId,
           requestBody: {
             role: 'reader',
