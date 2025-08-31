@@ -4,6 +4,7 @@ import path from 'path';
 import GoogleDriveService from '@/lib/googleDrive';
 import GeminiService from '@/lib/gemini';
 import LocalAnalyzer from '@/lib/localAnalyzer';
+import { instructionsCache } from '@/lib/instructionsCache';
 
 export async function POST(request: NextRequest) {
   let tempFilePath: string | null = null;
@@ -17,8 +18,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    // Create temporary directory if it doesn't exist
-    const tempDir = path.join(process.cwd(), 'temp');
+    // Create temporary directory if it doesn't exist (use /tmp for serverless)
+    const tempDir = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME 
+      ? '/tmp' 
+      : path.join(process.cwd(), 'temp');
     if (!fs.existsSync(tempDir)) {
       fs.mkdirSync(tempDir, { recursive: true });
     }
@@ -34,17 +37,28 @@ export async function POST(request: NextRequest) {
     // Get instruction file URL if instruction file ID is provided
     let instructionFileUrl = null;
     if (instructionFileId) {
-      try {
-        const metadataPath = path.join(process.cwd(), 'instructions', `${instructionFileId}.meta.json`);
-        if (fs.existsSync(metadataPath)) {
-          const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf-8'));
-          instructionFileUrl = metadata.directUrl || metadata.publicUrl;
-          console.log('Found instruction file URL:', instructionFileUrl);
-        } else {
-          console.warn('No metadata found for instruction file:', instructionFileId);
+      // First try memory cache (for serverless)
+      const cachedInstruction = instructionsCache.get(instructionFileId);
+      if (cachedInstruction) {
+        instructionFileUrl = cachedInstruction.directUrl || cachedInstruction.publicUrl;
+        console.log('Found instruction file URL from cache:', instructionFileUrl);
+      } else {
+        // Fallback to filesystem (for local development)
+        try {
+          const instructionsDir = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME 
+            ? '/tmp/instructions' 
+            : path.join(process.cwd(), 'instructions');
+          const metadataPath = path.join(instructionsDir, `${instructionFileId}.meta.json`);
+          if (fs.existsSync(metadataPath)) {
+            const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf-8'));
+            instructionFileUrl = metadata.directUrl || metadata.publicUrl;
+            console.log('Found instruction file URL from filesystem:', instructionFileUrl);
+          } else {
+            console.warn('No metadata found for instruction file:', instructionFileId);
+          }
+        } catch (error) {
+          console.warn('Error reading instruction file metadata:', error);
         }
-      } catch (error) {
-        console.warn('Error reading instruction file metadata:', error);
       }
     }
 
