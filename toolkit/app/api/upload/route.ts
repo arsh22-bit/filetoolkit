@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
           analysisResult = aiAnalysisResult;
           console.log('Gemini analysis successful');
         } else {
-          geminiError = aiAnalysisResult?.error || 'Analysis failed';
+          geminiError = 'Analysis failed';
         }
       } catch (error) {
         geminiError = error instanceof Error ? error.message : 'Unknown error';
@@ -154,7 +154,13 @@ export async function POST(request: NextRequest) {
   }
 }
 
-function getStatusMessage(status: any): string {
+interface ServiceStatus {
+  localAnalysis: boolean;
+  googleDrive: string;
+  geminiAnalysis: string;
+}
+
+function getStatusMessage(status: ServiceStatus): string {
   if (status.googleDrive === 'success' && status.geminiAnalysis === 'success') {
     return 'File uploaded to Google Drive and analyzed with AI successfully!';
   } else if (status.localAnalysis && status.googleDrive === 'success') {

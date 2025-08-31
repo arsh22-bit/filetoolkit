@@ -12,6 +12,12 @@ export async function GET() {
     const hasGemini = !!process.env.GEMINI_API_KEY;
     const hasSharedDrive = !!process.env.GOOGLE_SHARED_DRIVE_ID;
 
+    interface Recommendation {
+      service: string;
+      message: string;
+      priority: string;
+    }
+
     const status = {
       services: {
         localAnalysis: {
@@ -36,7 +42,7 @@ export async function GET() {
             : 'Gemini API not configured'
         }
       },
-      recommendations: []
+      recommendations: [] as Recommendation[]
     };
 
     // Add recommendations based on configuration

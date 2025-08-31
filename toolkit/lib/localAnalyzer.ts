@@ -3,13 +3,24 @@ import path from 'path';
 
 class LocalAnalyzer {
   
-  async analyzeFile(filePath: string, fileName: string, instructionFileUrl: string = ''): Promise<any> {
+  async analyzeFile(filePath: string, fileName: string, instructionFileUrl: string = ''): Promise<{
+    success: boolean;
+    feedback: string;
+    timestamp: string;
+    fileInfo?: {
+      name: string;
+      size: number;
+      extension: string;
+      lastModified: Date;
+    };
+    error?: string;
+  }> {
     try {
       const stats = fs.statSync(filePath);
       const extension = path.extname(fileName).toLowerCase();
       const fileSize = stats.size;
       
-      let analysis = {
+      const analysis = {
         success: true,
         feedback: '',
         timestamp: new Date().toISOString(),
@@ -22,15 +33,15 @@ class LocalAnalyzer {
       };
 
       // Basic file type analysis
-      let fileTypeAnalysis = this.getFileTypeAnalysis(extension, fileSize);
+      const fileTypeAnalysis = this.getFileTypeAnalysis(extension);
       
       // Content analysis for text files
       let contentAnalysis = '';
       if (this.isTextFile(extension)) {
         try {
           const content = fs.readFileSync(filePath, 'utf-8');
-          contentAnalysis = this.analyzeTextContent(content, fileName);
-        } catch (error) {
+          contentAnalysis = this.analyzeTextContent(content);
+        } catch {
           contentAnalysis = 'Could not read file content for analysis.';
         }
       }
@@ -76,7 +87,7 @@ ${fileTypeAnalysis.recommendations}
     return textExtensions.includes(extension);
   }
 
-  private getFileTypeAnalysis(extension: string, fileSize: number) {
+  private getFileTypeAnalysis(extension: string) {
     const analyses: { [key: string]: { type: string, description: string, recommendations: string } } = {
       '.xlsx': {
         type: 'Excel Spreadsheet',
@@ -124,7 +135,7 @@ ${fileTypeAnalysis.recommendations}
     return analyses[extension] || defaultAnalysis;
   }
 
-  private analyzeTextContent(content: string, fileName: string): string {
+  private analyzeTextContent(content: string): string {
     const lines = content.split('\n');
     const wordCount = content.split(/\s+/).filter(word => word.length > 0).length;
     const charCount = content.length;
