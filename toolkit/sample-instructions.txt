@@ -1,0 +1,30 @@
+EXCEL FILE ANALYSIS INSTRUCTIONS
+
+Please analyze the Excel file with focus on the following areas:
+
+1. DATA QUALITY ASSESSMENT:
+   - Check for missing values, duplicates, and inconsistencies
+   - Validate data types and formats
+   - Identify outliers and anomalies
+
+2. STRUCTURE ANALYSIS:
+   - Review column headers and naming conventions
+   - Check data organization across all tabs
+   - Assess if the structure follows best practices
+
+3. CONTENT REVIEW:
+   - Analyze trends and patterns in the data
+   - Identify potential data relationships
+   - Review calculations and formulas (if any)
+
+4. RECOMMENDATIONS:
+   - Suggest improvements for data quality
+   - Recommend better organization or structure
+   - Provide actionable insights
+
+5. SPECIFIC FOCUS AREAS:
+   - Pay special attention to date formats
+   - Check numerical data for accuracy
+   - Review any categorical data for consistency
+
+Please provide detailed feedback for each tab separately and then an overall summary.

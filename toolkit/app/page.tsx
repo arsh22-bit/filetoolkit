@@ -1,103 +1,190 @@
-import Image from "next/image";
+'use client';
+
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import FileUpload from '@/components/FileUpload';
+import FeedbackDisplay from '@/components/FeedbackDisplay';
+import { FileText, Settings } from 'lucide-react';
+
+interface AnalysisResult {
+  success: boolean;
+  feedback: string;
+  timestamp: string;
+}
+
+interface UploadedFile {
+  name: string;
+  fileId: string;
+  publicUrl: string;
+  directUrl: string;
+}
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<UploadedFile | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [instructions, setInstructions] = useState<Array<{id: string; content: string; fullContent: string; createdAt: string; size: number; publicUrl: string | null; directUrl: string | null; hasGoogleDriveBackup: boolean; fileName: string}>>([]);
+  const [selectedInstructionId, setSelectedInstructionId] = useState<string>('');
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+  useEffect(() => {
+    fetchInstructions();
+  }, []);
+
+  const fetchInstructions = async () => {
+    try {
+      const response = await fetch('/api/instructions');
+      const data = await response.json();
+      if (data.success) {
+        setInstructions(data.instructions);
+        if (data.instructions.length > 0) {
+          setSelectedInstructionId(data.instructions[0].id);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching instructions:', error);
+    }
+  };
+
+  const handleFileUpload = async (file: File) => {
+    setIsLoading(true);
+    setError(null);
+    setAnalysisResult(null);
+    setUploadedFile(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      if (selectedInstructionId) {
+        formData.append('instructionFileId', selectedInstructionId);
+      }
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setUploadedFile(data.file);
+        setAnalysisResult(data.analysis);
+      } else {
+        setError(data.error || 'Upload failed');
+      }
+    } catch (error) {
+      setError('An error occurred during upload');
+      console.error('Upload error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Navigation */}
+      <nav className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between h-16">
+            <div className="flex items-center">
+              <FileText className="h-8 w-8 text-blue-600 mr-3" />
+              <span className="text-xl font-semibold text-gray-900">File Analysis Tool</span>
+            </div>
+            <div className="flex items-center space-x-4">
+              <Link
+                href="/instructions"
+                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Manage Instructions
+              </Link>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <div className="px-4 py-6 sm:px-0">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Upload File for Analysis
+            </h1>
+            <p className="text-gray-600">
+              Upload any file type to get AI-powered feedback and analysis. 
+              The file will be uploaded to Google Drive and analyzed using Gemini AI.
+            </p>
+          </div>
+
+          {/* Instruction Selection */}
+          {instructions.length > 0 && (
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select Analysis Instructions:
+              </label>
+              <select
+                value={selectedInstructionId}
+                onChange={(e) => setSelectedInstructionId(e.target.value)}
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              >
+                <option value="">No specific instructions</option>
+                {instructions.map((instruction) => (
+                  <option key={instruction.id} value={instruction.id}>
+                    {instruction.fileName} {instruction.hasGoogleDriveBackup ? '✓ (URL Available)' : '⚠ (Local Only)'}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* File Upload Component */}
+          <div className="mb-8">
+            <FileUpload onFileUpload={handleFileUpload} isLoading={isLoading} />
+          </div>
+
+          {/* Error Display */}
+          {error && (
+            <div className="mb-6 p-4 border border-red-300 rounded-md bg-red-50">
+              <div className="text-sm text-red-700">{error}</div>
+            </div>
+          )}
+
+          {/* Loading State */}
+          {isLoading && (
+            <div className="mb-6 p-4 border border-blue-300 rounded-md bg-blue-50">
+              <div className="text-sm text-blue-700">
+                Processing your file... This may take a few moments.
+              </div>
+            </div>
+          )}
+
+          {/* Uploaded File Info */}
+          {uploadedFile && (
+            <div className="mb-6 p-4 border border-green-300 rounded-md bg-green-50">
+              <div className="text-sm text-green-700">
+                <strong>File uploaded successfully:</strong> {uploadedFile.name}
+                <br />
+                <a 
+                  href={uploadedFile.publicUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:text-blue-800 underline"
+                >
+                  View in Google Drive
+                </a>
+              </div>
+            </div>
+          )}
+
+          {/* Feedback Display */}
+          {analysisResult && (
+            <FeedbackDisplay 
+              feedback={analysisResult.feedback}
+              timestamp={analysisResult.timestamp}
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+          )}
         </div>
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
     </div>
   );
 }
