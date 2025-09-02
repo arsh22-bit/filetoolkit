@@ -8,6 +8,11 @@ export interface InstructionData {
   fileId: string | null;
   createdAt: string;
   hasGoogleDriveBackup: boolean;
+  specialInstruction?: string;
+  isPMPA?: boolean;
+  feedback?: string;
+  inputData?: Record<string, string>;
+  customPrompt?: string;
 }
 
 // Use global to persist across serverless function invocations

@@ -1,0 +1,3 @@
+Simple instruction file for testing the custom prompt functionality.
+
+This file will be used to verify that the custom prompt input field appears when uploading instruction files.

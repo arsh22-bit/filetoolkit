@@ -1,0 +1,17 @@
+FINANCIAL ANALYSIS INSTRUCTIONS
+
+Please analyze the financial data with standard reporting practices.
+
+SPECIAL INSTRUCTION: Pay special attention to quarterly revenue patterns and identify any anomalies in the data that might indicate seasonal trends or potential data quality issues.
+
+IMPORTANT NOTE: This analysis requires validation against regulatory compliance standards for financial reporting.
+
+Standard Analysis Requirements:
+1. Revenue trend analysis
+2. Expense categorization
+3. Profit margin calculations
+4. Cash flow assessment
+
+PRIORITY INSTRUCTION: Ensure all monetary values are properly formatted and validated before presenting results.
+
+Please provide comprehensive insights and recommendations based on the findings.
