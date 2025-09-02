@@ -2,7 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Upload, FileText, Eye, X, Download, Star, MessageSquare, Edit3, Trash2, Edit } from 'lucide-react';
+import { ArrowLeft, Upload, FileText, Eye, X, Download, Star, MessageSquare, Edit3, Trash2, Edit, CheckSquare, RefreshCw } from 'lucide-react';
+
+interface PMPChecklistItem {
+  srNo: number;
+  checklist: string;
+  compliance: string;
+  remark: string;
+}
 
 interface Instruction {
   id: string;
@@ -16,6 +23,7 @@ interface Instruction {
   inputData?: Record<string, string>;
   customPrompt?: string;
   fileName?: string;
+  pmpChecklist?: PMPChecklistItem[];
 }
 
 export default function InstructionsPage() {
@@ -36,6 +44,7 @@ export default function InstructionsPage() {
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isGeneratingFeedback, setIsGeneratingFeedback] = useState<string | null>(null);
+  const [isGeneratingChecklist, setIsGeneratingChecklist] = useState<string | null>(null);
 
   useEffect(() => {
     fetchInstructions();
@@ -313,6 +322,43 @@ export default function InstructionsPage() {
       console.error('Generate feedback error:', error);
     } finally {
       setIsGeneratingFeedback(null);
+    }
+  };
+
+  const generatePMPChecklist = async (instructionId: string) => {
+    setIsGeneratingChecklist(instructionId);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await fetch('/api/instructions/fill-pmp-checklist', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          instructionId: instructionId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setSuccess('PMP-A checklist generated successfully!');
+        fetchInstructions();
+        
+        // Update viewing instruction if it's the same one
+        if (viewingInstruction?.id === instructionId) {
+          setViewingInstruction(data.instruction);
+        }
+      } else {
+        setError(data.error || 'Failed to generate PMP-A checklist');
+      }
+    } catch (error) {
+      setError('An error occurred while generating the PMP-A checklist');
+      console.error('Generate PMP checklist error:', error);
+    } finally {
+      setIsGeneratingChecklist(null);
     }
   };
 
@@ -641,6 +687,19 @@ export default function InstructionsPage() {
                     Input Data
                   </button>
                 )}
+                {viewingInstruction.isPMPA && (
+                  <button
+                    onClick={() => setActiveTab('checklist')}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                      activeTab === 'checklist'
+                        ? 'border-green-500 text-green-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    <CheckSquare className="h-4 w-4 inline mr-1" />
+                    PMP Checklist
+                  </button>
+                )}
               </nav>
             </div>
 
@@ -873,6 +932,110 @@ export default function InstructionsPage() {
                         </div>
                       </div>
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'checklist' && viewingInstruction.isPMPA && (
+                <div className="space-y-4">
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div className="flex justify-between items-center mb-3">
+                      <h4 className="text-sm font-medium text-green-800">PMP-A Compliance Checklist</h4>
+                      {(!viewingInstruction.pmpChecklist || viewingInstruction.pmpChecklist.length === 0) && (
+                        <button
+                          onClick={() => generatePMPChecklist(viewingInstruction.id)}
+                          disabled={isGeneratingChecklist === viewingInstruction.id}
+                          className="px-3 py-1 bg-green-600 text-white text-xs font-medium rounded hover:bg-green-700 disabled:opacity-50 flex items-center"
+                        >
+                          <CheckSquare className="h-3 w-3 mr-1" />
+                          {isGeneratingChecklist === viewingInstruction.id ? 'Generating...' : 'Generate AI Checklist'}
+                        </button>
+                      )}
+                    </div>
+                    
+                    {viewingInstruction.pmpChecklist && viewingInstruction.pmpChecklist.length > 0 ? (
+                      <div className="space-y-3">
+                        <div className="bg-white border border-green-200 rounded p-3">
+                          <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-200">
+                              <thead className="bg-gray-50">
+                                <tr>
+                                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Sr No.
+                                  </th>
+                                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Checklist Item
+                                  </th>
+                                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Compliance
+                                  </th>
+                                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Remark
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody className="bg-white divide-y divide-gray-200">
+                                {viewingInstruction.pmpChecklist.map((item) => (
+                                  <tr key={item.srNo}>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                      {item.srNo}
+                                    </td>
+                                    <td className="px-6 py-4 text-sm text-gray-900">
+                                      <div className="max-w-xs">
+                                        {item.checklist}
+                                      </div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                        item.compliance === 'Yes' ? 'bg-green-100 text-green-800' :
+                                        item.compliance === 'No' ? 'bg-red-100 text-red-800' :
+                                        item.compliance === 'Partial' ? 'bg-yellow-100 text-yellow-800' :
+                                        'bg-gray-100 text-gray-800'
+                                      }`}>
+                                        {item.compliance}
+                                      </span>
+                                    </td>
+                                    <td className="px-6 py-4 text-sm text-gray-900">
+                                      <div className="max-w-sm">
+                                        {item.remark}
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                        <div className="flex justify-end space-x-2">
+                          <button
+                            onClick={() => generatePMPChecklist(viewingInstruction.id)}
+                            disabled={isGeneratingChecklist === viewingInstruction.id}
+                            className="px-3 py-1 bg-green-600 text-white text-xs font-medium rounded hover:bg-green-700 disabled:opacity-50 flex items-center"
+                          >
+                            <RefreshCw className="h-3 w-3 mr-1" />
+                            {isGeneratingChecklist === viewingInstruction.id ? 'Regenerating...' : 'Regenerate Checklist'}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-white border border-green-200 rounded p-3">
+                        <div className="text-center py-8">
+                          <CheckSquare className="mx-auto h-8 w-8 text-green-400 mb-3" />
+                          <p className="text-sm text-green-600 mb-4">No PMP-A checklist available yet</p>
+                          <p className="text-xs text-green-500 mb-4">
+                            Generate an AI-powered compliance checklist that analyzes the PMP-A content against standard requirements
+                          </p>
+                          <button
+                            onClick={() => generatePMPChecklist(viewingInstruction.id)}
+                            disabled={isGeneratingChecklist === viewingInstruction.id}
+                            className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 disabled:opacity-50 flex items-center mx-auto"
+                          >
+                            <CheckSquare className="h-4 w-4 mr-2" />
+                            {isGeneratingChecklist === viewingInstruction.id ? 'Generating Checklist...' : 'Generate AI Checklist'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

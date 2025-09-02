@@ -1,4 +1,11 @@
 // Global instruction cache for serverless environments
+export interface PMPChecklistItem {
+  srNo: number;
+  checklist: string;
+  compliance: string;
+  remark: string;
+}
+
 export interface InstructionData {
   id: string;
   fileName: string;
@@ -13,6 +20,7 @@ export interface InstructionData {
   feedback?: string;
   inputData?: Record<string, string>;
   customPrompt?: string;
+  pmpChecklist?: PMPChecklistItem[];
 }
 
 // Use global to persist across serverless function invocations
