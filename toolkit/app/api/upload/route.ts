@@ -68,11 +68,43 @@ export async function POST(request: NextRequest) {
     
     console.log('Available services:', { hasGoogleDrive, hasGemini });
 
-    // Always perform local analysis first (this is guaranteed to work)
-    const localAnalyzer = new LocalAnalyzer();
-    let analysisResult = await localAnalyzer.analyzeFile(tempFilePath, file.name, instructionFileUrl || '');
+    // Try Gemini analysis first (direct file analysis)
+    let analysisResult = null;
+    let aiAnalysisResult = null;
+    let geminiError = null;
+    
+    if (hasGemini) {
+      try {
+        const geminiService = new GeminiService();
+        // Use direct file analysis - no Google Drive needed!
+        aiAnalysisResult = await geminiService.analyzeFileDirectly(
+          tempFilePath,
+          file.name,
+          instructionFileUrl || ''
+        );
+        
+        if (aiAnalysisResult && aiAnalysisResult.success) {
+          analysisResult = aiAnalysisResult;
+          console.log('Gemini direct analysis successful');
+        } else {
+          geminiError = 'Direct analysis failed';
+        }
+      } catch (error) {
+        geminiError = error instanceof Error ? error.message : 'Unknown error';
+        console.warn('Gemini direct analysis failed:', error);
+      }
+    } else {
+      geminiError = 'Gemini API not configured';
+    }
 
-    // Try Google Drive upload (optional)
+    // Fallback to local analysis if Gemini fails
+    if (!analysisResult) {
+      console.log('Falling back to local analysis');
+      const localAnalyzer = new LocalAnalyzer();
+      analysisResult = await localAnalyzer.analyzeFile(tempFilePath, file.name, instructionFileUrl || '');
+    }
+
+    // Try Google Drive upload (optional - now only for backup/sharing)
     let uploadResult = null;
     let driveError = null;
     
@@ -94,35 +126,6 @@ export async function POST(request: NextRequest) {
       }
     } else {
       driveError = 'Google Drive not configured';
-    }
-
-    // Try Gemini analysis (optional, only if we have a drive URL)
-    let aiAnalysisResult = null;
-    let geminiError = null;
-    
-    if (hasGemini && uploadResult && uploadResult.directUrl) {
-      try {
-        const geminiService = new GeminiService();
-        aiAnalysisResult = await geminiService.analyzeFileWithInstruction(
-          uploadResult.directUrl,
-          instructionFileUrl
-        );
-        
-        if (aiAnalysisResult && aiAnalysisResult.success) {
-          // Replace local analysis with AI analysis if successful
-          analysisResult = aiAnalysisResult;
-          console.log('Gemini analysis successful');
-        } else {
-          geminiError = 'Analysis failed';
-        }
-      } catch (error) {
-        geminiError = error instanceof Error ? error.message : 'Unknown error';
-        console.warn('Gemini analysis failed:', error);
-      }
-    } else if (!hasGemini) {
-      geminiError = 'Gemini API not configured';
-    } else if (!uploadResult) {
-      geminiError = 'No file URL available for AI analysis';
     }
 
     // Determine service status
@@ -175,12 +178,14 @@ interface ServiceStatus {
 }
 
 function getStatusMessage(status: ServiceStatus): string {
-  if (status.googleDrive === 'success' && status.geminiAnalysis === 'success') {
-    return 'File uploaded to Google Drive and analyzed with AI successfully!';
+  if (status.geminiAnalysis === 'success' && status.googleDrive === 'success') {
+    return 'File analyzed with AI and uploaded to Google Drive successfully!';
+  } else if (status.geminiAnalysis === 'success') {
+    return 'File analyzed with AI successfully! (Google Drive backup optional)';
   } else if (status.localAnalysis && status.googleDrive === 'success') {
     return 'File uploaded to Google Drive with local analysis (AI analysis unavailable).';
   } else if (status.localAnalysis) {
-    return 'File analyzed locally. Configure Google Drive and Gemini API for enhanced features.';
+    return 'File analyzed locally. Configure Gemini API for AI-powered analysis.';
   } else {
     return 'File processed with limited features. Check configuration and try again.';
   }
