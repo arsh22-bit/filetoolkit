@@ -1,0 +1,12 @@
+{
+  "id": "instruction_1756832375378",
+  "fileName": "test_instruction_with_custom.txt",
+  "content": "This is a general instruction file for data analysis.\n\nThe AI should focus on:\n1. Data quality assessment\n2. Identifying missing values\n3. Statistical summarization\n4. Data validation checks\n\nSpecial attention should be given to numerical accuracy and data consistency.\n",
+  "publicUrl": null,
+  "directUrl": null,
+  "fileId": null,
+  "createdAt": "2025-09-02T16:59:37.659Z",
+  "hasGoogleDriveBackup": false,
+  "isPMPA": false,
+  "customPrompt": "Please focus specifically on data validation and provide detailed recommendations for improving data quality metrics."
+}

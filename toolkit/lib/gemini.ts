@@ -152,7 +152,7 @@ ${customPrompt}
   }
 
   // NEW METHOD: Analyze file directly from local file path
-  async analyzeFileDirectly(filePath: string, fileName: string, instructionContent: string = '') {
+  async analyzeFileDirectly(filePath: string, fileName: string, instructionContent: string = '', customPrompt?: string) {
     try {
       // Get file info
       const stats = fs.statSync(filePath);
@@ -165,6 +165,12 @@ ${customPrompt}
       if (this.isTextFile(extension)) {
         // For text files, read the content directly
         fileContent = fs.readFileSync(filePath, 'utf-8');
+        
+        let instructions = instructionContent || 'Provide a comprehensive analysis of the file content, structure, and quality.';
+        if (customPrompt) {
+          instructions += `\n\nAdditional custom instructions: ${customPrompt}`;
+        }
+        
         analysisPrompt = `
 Please analyze this ${extension} file named "${fileName}":
 
@@ -175,7 +181,7 @@ ${fileContent}
 File size: ${stats.size} bytes
 
 Instructions for analysis:
-${instructionContent || 'Provide a comprehensive analysis of the file content, structure, and quality.'}
+${instructions}
 
 Please:
 1. Identify the file type and format
@@ -186,6 +192,11 @@ Please:
         `;
       } else {
         // For binary files, provide metadata analysis
+        let instructions = instructionContent || 'Provide a comprehensive analysis of the file type, format, and recommendations.';
+        if (customPrompt) {
+          instructions += `\n\nAdditional custom instructions: ${customPrompt}`;
+        }
+        
         analysisPrompt = `
 Please analyze this ${extension} file named "${fileName}":
 
@@ -196,7 +207,7 @@ File Information:
 - Last Modified: ${stats.mtime.toISOString()}
 
 Instructions for analysis:
-${instructionContent || 'Provide a comprehensive analysis of the file type, format, and recommendations.'}
+${instructions}
 
 Note: This is a binary file format. Please provide analysis based on the file type, size, and general recommendations for this type of file.
 

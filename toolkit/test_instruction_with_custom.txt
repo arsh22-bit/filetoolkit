@@ -1,0 +1,9 @@
+This is a general instruction file for data analysis.
+
+The AI should focus on:
+1. Data quality assessment
+2. Identifying missing values
+3. Statistical summarization
+4. Data validation checks
+
+Special attention should be given to numerical accuracy and data consistency.

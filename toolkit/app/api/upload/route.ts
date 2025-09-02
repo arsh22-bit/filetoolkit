@@ -34,14 +34,21 @@ export async function POST(request: NextRequest) {
     tempFilePath = path.join(tempDir, `${timestamp}_${safeName}`);
     fs.writeFileSync(tempFilePath, buffer);
 
-    // Get instruction file URL if instruction file ID is provided
+    // Get instruction file URL and custom prompt if instruction file ID is provided
     let instructionFileUrl = null;
+    let instructionCustomPrompt = null;
+    let instructionContent = '';
     if (instructionFileId) {
       // First try memory cache (for serverless)
       const cachedInstruction = instructionsCache.get(instructionFileId);
       if (cachedInstruction) {
         instructionFileUrl = cachedInstruction.directUrl || cachedInstruction.publicUrl;
-        console.log('Found instruction file URL from cache:', instructionFileUrl);
+        instructionCustomPrompt = cachedInstruction.customPrompt;
+        instructionContent = cachedInstruction.content;
+        console.log('Found instruction file from cache:', {
+          url: instructionFileUrl,
+          hasCustomPrompt: !!instructionCustomPrompt
+        });
       } else {
         // Fallback to filesystem (for local development)
         try {
@@ -52,7 +59,12 @@ export async function POST(request: NextRequest) {
           if (fs.existsSync(metadataPath)) {
             const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf-8'));
             instructionFileUrl = metadata.directUrl || metadata.publicUrl;
-            console.log('Found instruction file URL from filesystem:', instructionFileUrl);
+            instructionCustomPrompt = metadata.customPrompt;
+            instructionContent = metadata.content;
+            console.log('Found instruction file from filesystem:', {
+              url: instructionFileUrl,
+              hasCustomPrompt: !!instructionCustomPrompt
+            });
           } else {
             console.warn('No metadata found for instruction file:', instructionFileId);
           }
@@ -76,11 +88,12 @@ export async function POST(request: NextRequest) {
     if (hasGemini) {
       try {
         const geminiService = new GeminiService();
-        // Use direct file analysis - no Google Drive needed!
+        // Use direct file analysis with instruction content and custom prompt
         aiAnalysisResult = await geminiService.analyzeFileDirectly(
           tempFilePath,
           file.name,
-          instructionFileUrl || ''
+          instructionContent,
+          instructionCustomPrompt || undefined
         );
         
         if (aiAnalysisResult && aiAnalysisResult.success) {

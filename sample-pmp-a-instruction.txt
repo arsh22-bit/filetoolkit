@@ -1,0 +1,32 @@
+PMP-A Analysis Instructions
+
+This is a Project Management Professional - Analysis (PMP-A) file for comprehensive project evaluation.
+
+Please analyze the uploaded project documents with focus on:
+
+1. PROJECT SCOPE ASSESSMENT:
+   - Review project charter and requirements
+   - Identify scope creep indicators
+   - Validate deliverables alignment
+
+2. RISK ANALYSIS:
+   - Identify potential project risks
+   - Assess risk impact and probability
+   - Review mitigation strategies
+
+3. STAKEHOLDER MANAGEMENT:
+   - Map stakeholder influence and interest
+   - Review communication plans
+   - Assess stakeholder engagement
+
+4. TIMELINE EVALUATION:
+   - Analyze project schedule adherence
+   - Identify critical path dependencies
+   - Review milestone achievements
+
+5. RESOURCE UTILIZATION:
+   - Assess team productivity metrics
+   - Review budget allocation efficiency
+   - Identify resource constraints
+
+This PMP-A file requires detailed feedback and input from project managers.
