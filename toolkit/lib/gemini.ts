@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
+import fs from 'fs';
 
 class GeminiService {
   private genAI: GoogleGenerativeAI;
@@ -148,6 +149,112 @@ ${customPrompt}
       
       throw new Error('Failed to analyze file with custom prompt');
     }
+  }
+
+  // NEW METHOD: Analyze file directly from local file path
+  async analyzeFileDirectly(filePath: string, fileName: string, instructionContent: string = '') {
+    try {
+      // Get file info
+      const stats = fs.statSync(filePath);
+      const extension = fileName.toLowerCase().split('.').pop();
+      
+      let fileContent = '';
+      let analysisPrompt = '';
+      
+      // Handle different file types
+      if (this.isTextFile(extension)) {
+        // For text files, read the content directly
+        fileContent = fs.readFileSync(filePath, 'utf-8');
+        analysisPrompt = `
+Please analyze this ${extension} file named "${fileName}":
+
+--- FILE CONTENT START ---
+${fileContent}
+--- FILE CONTENT END ---
+
+File size: ${stats.size} bytes
+
+Instructions for analysis:
+${instructionContent || 'Provide a comprehensive analysis of the file content, structure, and quality.'}
+
+Please:
+1. Identify the file type and format
+2. Analyze the data structure, content, and quality
+3. Identify any issues, inconsistencies, or areas for improvement
+4. Provide specific feedback and recommendations
+5. Format your response in a clear, structured manner
+        `;
+      } else {
+        // For binary files, provide metadata analysis
+        analysisPrompt = `
+Please analyze this ${extension} file named "${fileName}":
+
+File Information:
+- Name: ${fileName}
+- Type: ${extension ? '.' + extension : 'unknown'}
+- Size: ${this.formatFileSize(stats.size)}
+- Last Modified: ${stats.mtime.toISOString()}
+
+Instructions for analysis:
+${instructionContent || 'Provide a comprehensive analysis of the file type, format, and recommendations.'}
+
+Note: This is a binary file format. Please provide analysis based on the file type, size, and general recommendations for this type of file.
+
+Please:
+1. Identify what this file type is typically used for
+2. Comment on the file size (is it reasonable for this type?)
+3. Provide recommendations for handling this file type
+4. Suggest tools or methods for deeper analysis if needed
+5. Format your response in a clear, structured manner
+        `;
+      }
+
+      const result = await this.model.generateContent(analysisPrompt);
+      const response = await result.response;
+      const feedback = response.text();
+
+      return {
+        success: true,
+        feedback,
+        timestamp: new Date().toISOString(),
+        fileInfo: {
+          name: fileName,
+          size: stats.size,
+          extension: extension ? '.' + extension : '',
+          lastModified: stats.mtime,
+          isTextFile: this.isTextFile(extension)
+        }
+      };
+    } catch (error) {
+      console.error('Error analyzing file directly with Gemini:', error);
+      
+      // Handle specific rate limiting errors
+      if (error instanceof Error) {
+        if (error.message.includes('429') || error.message.includes('Too Many Requests') || error.message.includes('quota')) {
+          console.warn('Gemini API rate limit exceeded. Please wait before trying again.');
+          throw new Error('Gemini API rate limit exceeded. Please try again in a few minutes.');
+        }
+        
+        if (error.message.includes('GEMINI_API_KEY')) {
+          throw new Error('Gemini API key not configured or invalid');
+        }
+      }
+      
+      throw new Error('Failed to analyze file directly with Gemini API');
+    }
+  }
+
+  private isTextFile(extension: string | undefined): boolean {
+    if (!extension) return false;
+    const textExtensions = ['txt', 'md', 'csv', 'json', 'xml', 'js', 'ts', 'html', 'css', 'py', 'java', 'cpp', 'c', 'h', 'yaml', 'yml', 'toml', 'ini', 'log', 'sql', 'sh', 'bat'];
+    return textExtensions.includes(extension.toLowerCase());
+  }
+
+  private formatFileSize(bytes: number): string {
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    if (bytes === 0) return '0 Bytes';
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
   }
 }
 
